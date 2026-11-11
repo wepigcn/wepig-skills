@@ -114,7 +114,7 @@ wepig --org COMPANY:123 call <endpoint_name> key=value
 
 ## 参数规则
 
-- 不要传身份字段：`platform_id`、`app`、`user_id`、`user_org_type`、`user_org_id` 由 CLI 或网关注入，脚本会拒绝。组织由 `--org`、`WEPIG_ORG` 或 `wepig use` 决定。
+- 不要传身份字段：`user_id`、`user_org_type`、`user_org_id` 由 CLI 或网关注入，脚本会拒绝。组织由 `--org`、`WEPIG_ORG` 或 `wepig use` 决定。
 - 业务参数以 `key=value` 传入：`limit=100` 会转整数，`farm_ids=[1,2]` 会转数组，`start_date=2026-06-01` 保持字符串。
 - 日期统一使用 `YYYY-MM-DD`。
 - 必填字段以 `detail <endpoint_name>` 返回的 `inputSchema.required` 为准。

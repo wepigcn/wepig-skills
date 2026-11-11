@@ -369,7 +369,6 @@ async function main() {
     const args = { name, ...selected };
     for (let i = 1; i < rest.length; i++) {
       const token = rest[i];
-      if (token === "--platform-id") die("platform_id 由服务端推导，请勿传 --platform-id");
       if (token.startsWith("--")) die(`未知选项: ${token}`);
       if (!token.includes("=")) die(`业务参数格式应为 key=value，收到: ${token}`);
       const eq = token.indexOf("=");
