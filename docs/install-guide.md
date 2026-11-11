@@ -42,11 +42,11 @@ irm https://gitee.com/wepig/wepig-skills/raw/main/install.ps1 | iex
 | `WEPIG_REPO_HOST` | `gitee.com` | `github.com` |
 | `WEPIG_REPO_OWNER` | `wepig` | `wepigcn` |
 | `WEPIG_REPO_NAME` | `wepig-skills`（无需设置） | `wepig-skills` |
-| `WEPIG_REPO_URL` | —（可选，整体覆盖克隆地址） | `https://github.com/wepigcn/wepig-skills.git` |
+| `WEPIG_REPO_URL` | —（可选，整体覆盖克隆地址） | `https://<host>/<owner>/<name>.git` |
 
 注意事项：
-- 用户之前若已用 GitHub 源装过，重跑上面的命令**不会自动切换来源**（脚本对已有 clone 只做 `git pull`，并会提示来源不一致）。切换方式：`git -C ~/.local/share/wepig-skills remote set-url origin https://gitee.com/wepig/wepig-skills.git`。
-- Gemini CLI / Antigravity 官方以 GitHub 仓库为扩展源，Gitee 源可能装不上（脚本会先警告，失败时请让用户改用 GitHub 源）。
+- 用户之前若已用其他源装过，重跑上面的命令**不会自动切换来源**（脚本对已有 clone 只做 `git pull`，并会提示来源不一致）。切换方式：`git -C ~/.local/share/wepig-skills remote set-url origin https://gitee.com/wepig/wepig-skills.git`。
+- Gemini CLI / Antigravity 官方以 GitHub 仓库为扩展源，Gitee 源可能装不上；脚本会先警告，失败时请按脚本提示处理。
 - Codex CLI 用 `codex plugin marketplace add <https-url>` 注册，Gitee 地址可用。
 
 脚本会：
@@ -123,7 +123,7 @@ source ~/.config/wepig/env
 - **401 / 鉴权失败** — 重新执行 `wepig auth`，或核对 `WEPIG_API_KEY` 是否有效。
 - **提示存在多个可访问组织** — 先 `wepig orgs`，再 `wepig use TYPE:ID`，或单次加 `--org TYPE:ID`。
 - **harness 中看不到 skill** — 重跑安装脚本并单选该 harness，或参考 [README](https://gitee.com/wepig/wepig-skills#readme) 的手动注册步骤。
-- **Gitee 拉取失败 / 404** — Gitee 镜像同步可能滞后，确认 `WEPIG_REPO_HOST=gitee.com`、`WEPIG_REPO_OWNER=wepig` 且分支为 `main`；仍失败可改用 GitHub 源（见 [install-guide_en.md](install-guide_en.md)）。
+- **Gitee 拉取失败 / 404** — 确认 `WEPIG_REPO_HOST=gitee.com`、`WEPIG_REPO_OWNER=wepig` 且分支为 `main`，并检查 https://gitee.com/wepig/wepig-skills 是否可以访问。
 - **Windows 执行策略报错** — 先运行 `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`。
 
 ## 卸载

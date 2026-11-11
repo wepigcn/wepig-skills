@@ -6,7 +6,7 @@
 
 ## 安装
 
-> 默认从 **GitHub 官方仓库**（`github.com/wepigcn/wepig-skills`）拉取。国内网络可把仓库源切到 **Gitee 镜像**（`gitee.com/wepig/wepig-skills`），见下方变量表。
+> 中文版统一使用 **Gitee 国内源**（`gitee.com/wepig/wepig-skills`）。
 
 ### 方式一：一键脚本（推荐）
 
@@ -14,7 +14,7 @@
 
 ```
 请按照以下安装指南，帮我安装 wepig-skills：
-https://raw.githubusercontent.com/wepigcn/wepig-skills/main/docs/install-guide.md
+https://gitee.com/wepig/wepig-skills/raw/main/docs/install-guide.md
 ```
 
 AI 助手会读取安装指南、向你确认目标平台，然后自动完成整个安装流程。
@@ -24,28 +24,18 @@ AI 助手会读取安装指南、向你确认目标平台，然后自动完成�
 **macOS / Linux：**
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/wepigcn/wepig-skills/main/install.sh)
-```
-
-**Windows（PowerShell 7+）：**
-
-```powershell
-irm https://raw.githubusercontent.com/wepigcn/wepig-skills/main/install.ps1 | iex
-```
-
-国内改用 Gitee 源：
-
-```bash
 WEPIG_REPO_HOST=gitee.com WEPIG_REPO_OWNER=wepig \
   bash <(curl -fsSL https://gitee.com/wepig/wepig-skills/raw/main/install.sh)
 ```
+
+**Windows（PowerShell 7+）：**
 
 ```powershell
 $env:WEPIG_REPO_HOST = "gitee.com"; $env:WEPIG_REPO_OWNER = "wepig"
 irm https://gitee.com/wepig/wepig-skills/raw/main/install.ps1 | iex
 ```
 
-脚本默认从 GitHub 官方仓库拉取；上面两个环境变量把仓库源切到 Gitee 镜像。可注入的变量：
+以上命令通过环境变量指定 Gitee 仓库源。可注入的变量：
 
 | 变量 | 说明 | 默认值 |
 | --- | --- | --- |
@@ -54,13 +44,13 @@ irm https://gitee.com/wepig/wepig-skills/raw/main/install.ps1 | iex
 | `WEPIG_REPO_NAME` | 仓库名 | `wepig-skills` |
 | `WEPIG_REPO_URL` | 整体覆盖克隆地址 | `https://<host>/<owner>/<name>.git` |
 
-> 已从 GitHub 装过的用户重跑上面的命令**不会自动切换来源**（脚本只对已有 clone 执行 `git pull`，并会提示来源不一致）。要切换：`git -C ~/.local/share/wepig-skills remote set-url origin https://gitee.com/wepig/wepig-skills.git`。
+> 已从其他源装过的用户重跑上面的命令**不会自动切换来源**（脚本只对已有 clone 执行 `git pull`，并会提示来源不一致）。要切换：`git -C ~/.local/share/wepig-skills remote set-url origin https://gitee.com/wepig/wepig-skills.git`。
 > 另：Gemini CLI / Antigravity 官方以 GitHub 仓库为扩展源，用 Gitee 源安装可能失败（脚本会先给出提示）。
 
 ### 方式二：Claude Code plugin marketplace
 
 ```text
-/plugin marketplace add https://github.com/wepigcn/wepig-skills.git
+/plugin marketplace add https://gitee.com/wepig/wepig-skills.git
 /plugin install wepig@wepig-skills
 ```
 
@@ -72,7 +62,7 @@ irm https://gitee.com/wepig/wepig-skills/raw/main/install.ps1 | iex
 **macOS / Linux：**
 
 ```bash
-git clone https://github.com/wepigcn/wepig-skills.git ~/.local/share/wepig-skills
+git clone https://gitee.com/wepig/wepig-skills.git ~/.local/share/wepig-skills
 # 授权（写入 ~/.config/wepig/env）
 node ~/.local/share/wepig-skills/bin/wepig.mjs auth
 # 或手动配置个人 API Key
@@ -84,7 +74,7 @@ node ~/.local/share/wepig-skills/bin/wepig.mjs services
 **Windows：**
 
 ```powershell
-git clone https://github.com/wepigcn/wepig-skills.git $env:LOCALAPPDATA\wepig-skills
+git clone https://gitee.com/wepig/wepig-skills.git $env:LOCALAPPDATA\wepig-skills
 # 授权
 node $env:LOCALAPPDATA\wepig-skills\bin\wepig.mjs auth
 # 或手动配置个人 API Key
