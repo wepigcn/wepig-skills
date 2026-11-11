@@ -1,28 +1,28 @@
 #!/usr/bin/env bash
-# open-wepig-skills 安装、更新与卸载脚本
+# wepig-skills 安装、更新与卸载脚本
 # 用法：
-#   bash install.sh              # 安装（交互鉴权 + 生成 open-wepig-cli 命令 + 选 harness + 实测）
-#   bash install.sh update        # 更新（拉取最新 + 各平台同步 + 刷新 open-wepig-cli 命令）
+#   bash install.sh              # 安装（交互鉴权 + 生成 wepig 命令 + 选 harness + 实测）
+#   bash install.sh update        # 更新（拉取最新 + 各平台同步 + 刷新 wepig 命令）
 #   bash install.sh uninstall     # 卸载（删命令、symlink、鉴权、shell 配置行；clone 目录可选）
 #   bash install.sh --help
 
 set -euo pipefail
 
 # 仓库源可注入（国内镜像用 gitee，国际用 github）：
-#   OPEN_WEPIG_REPO_HOST=gitee.com OPEN_WEPIG_REPO_OWNER=wepig bash install.sh
-# 也可整体覆盖 OPEN_WEPIG_REPO_URL。
-REPO_HOST="${OPEN_WEPIG_REPO_HOST:-github.com}"
-REPO_OWNER="${OPEN_WEPIG_REPO_OWNER:-wepigcn}"
-REPO_NAME="${OPEN_WEPIG_REPO_NAME:-open-wepig-skills}"
-REPO_URL="${OPEN_WEPIG_REPO_URL:-https://$REPO_HOST/$REPO_OWNER/$REPO_NAME.git}"
-MARKETPLACE_NAME="open-wepig-skills"
-SKILL_NAME="open-wepig"          # skill / plugin / 扩展名
-CMD_NAME="open-wepig-cli"        # 生成的 PATH 命令名
-INSTALL_DIR="${OPEN_WEPIG_INSTALL_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/open-wepig-skills}"
-ENV_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/open-wepig"
+#   WEPIG_REPO_HOST=gitee.com WEPIG_REPO_OWNER=wepig bash install.sh
+# 也可整体覆盖 WEPIG_REPO_URL。
+REPO_HOST="${WEPIG_REPO_HOST:-github.com}"
+REPO_OWNER="${WEPIG_REPO_OWNER:-wepigcn}"
+REPO_NAME="${WEPIG_REPO_NAME:-wepig-skills}"
+REPO_URL="${WEPIG_REPO_URL:-https://$REPO_HOST/$REPO_OWNER/$REPO_NAME.git}"
+MARKETPLACE_NAME="wepig-skills"
+SKILL_NAME="wepig"          # skill / plugin / 扩展名
+CMD_NAME="wepig"        # 生成的 PATH 命令名
+INSTALL_DIR="${WEPIG_INSTALL_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/wepig-skills}"
+ENV_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/wepig"
 ENV_FILE="$ENV_DIR/env"
 SKILL_SRC="$INSTALL_DIR/skills/$SKILL_NAME"
-WES_ABS="$INSTALL_DIR/bin/open-cli.mjs"
+WES_ABS="$INSTALL_DIR/bin/wepig.mjs"
 BINDIR="$HOME/.local/bin"
 
 # 项目级安装参数（由参数解析填充）
@@ -51,7 +51,7 @@ read_tty() {
 usage() {
   cat <<EOF
 用法: bash install.sh [install|update|uninstall|--help] [--project [DIR]]
-  install    交互式安装（默认）：鉴权 + 生成 open-wepig-cli 命令 + 装 harness + 实测
+  install    交互式安装（默认）：鉴权 + 生成 wepig 命令 + 装 harness + 实测
   update     拉取最新并同步到各已安装 harness
   uninstall  卸载：删命令、symlink、鉴权、shell 配置行（clone 目录可选）
 
@@ -65,130 +65,106 @@ usage() {
       Gemini / Codex / OpenCode 本质为全局插件，项目模式下仍会安装但全局生效。
 
 仓库源（默认 GitHub 官方仓库）可用环境变量注入：
-  OPEN_WEPIG_REPO_HOST  默认 github.com，国内镜像用 gitee.com
-  OPEN_WEPIG_REPO_OWNER 默认 wepigcn，gitee 镜像为 wepig
-  OPEN_WEPIG_REPO_NAME  默认 open-wepig-skills
-  OPEN_WEPIG_REPO_URL   整体覆盖克隆地址
-例：OPEN_WEPIG_REPO_HOST=gitee.com OPEN_WEPIG_REPO_OWNER=wepig bash install.sh
+  WEPIG_REPO_HOST  默认 github.com，国内镜像用 gitee.com
+  WEPIG_REPO_OWNER 默认 wepigcn，gitee 镜像为 wepig
+  WEPIG_REPO_NAME  默认 wepig-skills
+  WEPIG_REPO_URL   整体覆盖克隆地址
+例：WEPIG_REPO_HOST=gitee.com WEPIG_REPO_OWNER=wepig bash install.sh
 EOF
 }
 
 # ---------- 鉴权 ----------
-ask_auth() {
-  echo "需要 open-wepig 网关鉴权，两项均为必填。"
-  read_tty -rp "OPEN_WEPIG_APPID: " APPID
-  while [[ -z "${APPID//[[:space:]]/}" ]]; do
-    err "APPID 不能为空"; read_tty -rp "OPEN_WEPIG_APPID: " APPID
-  done
-  read_tty -rsp "OPEN_WEPIG_SECRET（输入不回显）: " SECRET; echo
-  while [[ -z "${SECRET//[[:space:]]/}" ]]; do
-    err "SECRET 不能为空"; read_tty -rsp "OPEN_WEPIG_SECRET: " SECRET; echo
-  done
-  export OPEN_WEPIG_APPID="$APPID" OPEN_WEPIG_SECRET="$SECRET"
+target_env_file() {
+  if [[ -n "$PROJECT_DIR" ]]; then printf '%s' "$PROJECT_ENV_FILE"; else printf '%s' "$ENV_FILE"; fi
 }
 
-# 收集鉴权：仅将 APPID/SECRET 载入当前 shell，不写入文件
+target_context_file() {
+  if [[ -n "$PROJECT_DIR" ]]; then printf '%s' "$PROJECT_DIR/.wepig.context"; else printf '%s' "$ENV_DIR/context"; fi
+}
+
+load_env() {
+  local file; file="$(target_env_file)"
+  set -a; source "$file"; set +a
+  if [[ -n "$PROJECT_DIR" ]]; then export WEPIG_CONTEXT_FILE="$PROJECT_DIR/.wepig.context"; fi
+}
+
+write_manual_env() {
+  local file; file="$(target_env_file)"
+  mkdir -p "$(dirname "$file")"; chmod 700 "$(dirname "$file")"
+  {
+    printf '# wepig 鉴权，由 install.sh 生成\n'
+    printf 'export WEPIG_API_KEY=%q\n' "$WEPIG_API_KEY"
+    if [[ -n "$PROJECT_DIR" ]]; then printf 'export WEPIG_CONTEXT_FILE=%q\n' "$PROJECT_DIR/.wepig.context"; fi
+  } > "$file"
+  chmod 600 "$file"
+}
+
 collect_auth() {
   AUTH_REUSED=0
-  if [[ -n "$PROJECT_DIR" ]]; then
-    if [[ -f "$PROJECT_ENV_FILE" ]]; then
-      read_tty -rp "检测到项目级鉴权文件，是否复用？[Y/n] " reuse
-      if [[ ! "$reuse" =~ ^[Nn]$ ]]; then
-        green "复用已有项目级鉴权文件"
-        set -a; source "$PROJECT_ENV_FILE"; set +a
-        AUTH_REUSED=1
-        return
-      fi
+  local file; file="$(target_env_file)"
+  if [[ -f "$file" ]]; then
+    read_tty -rp "检测到新版鉴权文件，是否复用？[Y/n] " reuse
+    if [[ ! "$reuse" =~ ^[Nn]$ ]]; then
+      load_env
+      if [[ -n "${WEPIG_API_KEY:-}" ]]; then AUTH_REUSED=1; return; fi
+      yellow "鉴权文件没有 WEPIG_API_KEY，将重新授权"
     fi
-    ask_auth
-  else
-    if [[ -f "$ENV_FILE" ]]; then
-      read_tty -rp "检测到已有鉴权文件，是否复用？[Y/n] " reuse
-      if [[ ! "$reuse" =~ ^[Nn]$ ]]; then
-        green "复用已有鉴权文件"
-        set -a; source "$ENV_FILE"; set +a
-        AUTH_REUSED=1
-        return
-      fi
-    fi
-    ask_auth
   fi
+
+  echo "选择鉴权方式："
+  echo "  1) 浏览器授权（默认）"
+  echo "  2) 手动输入个人 API Key"
+  read_tty -rp "选择 [1]: " method
+  if [[ "${method:-1}" == "2" ]]; then
+    read_tty -rsp "WEPIG_API_KEY（输入不回显）: " WEPIG_API_KEY; echo
+    while [[ -z "${WEPIG_API_KEY//[[:space:]]/}" ]]; do
+      err "API Key 不能为空"; read_tty -rsp "WEPIG_API_KEY: " WEPIG_API_KEY; echo
+    done
+    export WEPIG_API_KEY
+    write_manual_env
+  else
+    node "$WES_ABS" auth --file "$file"
+    load_env
+  fi
+  if [[ -n "$PROJECT_DIR" ]] && ! grep -qF 'WEPIG_CONTEXT_FILE' "$file"; then
+    printf 'export WEPIG_CONTEXT_FILE=%q\n' "$PROJECT_DIR/.wepig.context" >> "$file"
+  fi
+  green "鉴权已配置：$file"
 }
 
 ensure_env_path() {
-  if ! grep -qF '# open-wepig-skills PATH' "$ENV_FILE" 2>/dev/null; then
+  if ! grep -qF '# wepig-skills PATH' "$ENV_FILE" 2>/dev/null; then
     cat >> "$ENV_FILE" <<'EOF'
 
-# open-wepig-skills PATH
-OPEN_WEPIG_BINDIR="$HOME/.local/bin"
+# wepig-skills PATH
+WEPIG_BINDIR="$HOME/.local/bin"
 case ":$PATH:" in
-  *":$OPEN_WEPIG_BINDIR:"*) ;;
-  *) export PATH="$OPEN_WEPIG_BINDIR:$PATH" ;;
+  *":$WEPIG_BINDIR:"*) ;;
+  *) export PATH="$WEPIG_BINDIR:$PATH" ;;
 esac
-unset OPEN_WEPIG_BINDIR
+unset WEPIG_BINDIR
 EOF
   fi
 }
 
-write_env() {
-  mkdir -p "$ENV_DIR"; chmod 700 "$ENV_DIR"
-  touch "$ENV_FILE"; chmod 600 "$ENV_FILE"
-  cat > "$ENV_FILE" <<EOF
-# open-wepig 鉴权，由 install.sh 生成
-export OPEN_WEPIG_APPID="$APPID"
-export OPEN_WEPIG_SECRET="$SECRET"
-EOF
-  ensure_env_path
-  green "已写入 ${ENV_FILE}（权限 600）"
-  local src_line='[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/open-wepig/env" ] && source "${XDG_CONFIG_HOME:-$HOME/.config}/open-wepig/env"  # open-wepig-skills'
-  for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
-    touch "$rc"
-    if grep -qF '.open-wepig.env' "$rc" 2>/dev/null; then
-      grep -vF '.open-wepig.env' "$rc" > "$rc.tmp" && mv "$rc.tmp" "$rc" || rm -f "$rc.tmp"
-    fi
-    grep -qF 'open-wepig/env' "$rc" 2>/dev/null || printf '\n%s\n' "$src_line" >> "$rc"
-  done
-  if [[ -f "$HOME/.open-wepig.env" ]]; then
-    rm -f "$HOME/.open-wepig.env"
-    yellow "已清理旧文件 ~/.open-wepig.env"
+configure_shell() {
+  if [[ -z "$PROJECT_DIR" ]]; then
+    ensure_env_path
+    local src_line='[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/wepig/env" ] && source "${XDG_CONFIG_HOME:-$HOME/.config}/wepig/env"  # wepig-skills'
+    local rc
+    for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
+      touch "$rc"
+      grep -qF 'wepig/env' "$rc" 2>/dev/null || printf '\n%s\n' "$src_line" >> "$rc"
+    done
   fi
 }
 
-write_project_env() {
-  cat > "$PROJECT_ENV_FILE" <<EOF
-# open-wepig 鉴权，由 install.sh 生成（项目级）
-export OPEN_WEPIG_APPID="$APPID"
-export OPEN_WEPIG_SECRET="$SECRET"
-EOF
-  chmod 600 "$PROJECT_ENV_FILE"
-  green "已写入 ${PROJECT_ENV_FILE}（权限 600）"
-}
-
-migrate_env() {
-  local old="$HOME/.open-wepig.env"
-  local src_line='[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/open-wepig/env" ] && source "${XDG_CONFIG_HOME:-$HOME/.config}/open-wepig/env"  # open-wepig-skills'
-  if [[ -f "$old" ]]; then
-    mkdir -p "$ENV_DIR"; chmod 700 "$ENV_DIR"
-    [[ -f "$ENV_FILE" ]] || { cp "$old" "$ENV_FILE"; chmod 600 "$ENV_FILE"; }
-    rm -f "$old"
-    green "已迁移鉴权文件 $old → ${ENV_FILE}"
-  fi
-  ensure_env_path
-  for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
-    touch "$rc"
-    if grep -qF '.open-wepig.env' "$rc" 2>/dev/null; then
-      grep -vF '.open-wepig.env' "$rc" > "$rc.tmp" && mv "$rc.tmp" "$rc" || rm -f "$rc.tmp"
-    fi
-    grep -qF 'open-wepig/env' "$rc" 2>/dev/null || printf '\n%s\n' "$src_line" >> "$rc"
-  done
-}
-
-# ---------- 生成 open-wepig-cli PATH 命令 ----------
+# ---------- 生成 wepig PATH 命令 ----------
 write_wepig_wrapper() {
   mkdir -p "$BINDIR"
   cat > "$BINDIR/$CMD_NAME" <<EOF
 #!/usr/bin/env bash
-# 由 open-wepig-skills install.sh 生成
+# 由 wepig-skills install.sh 生成
 exec node "$WES_ABS" "\$@"
 EOF
   chmod +x "$BINDIR/$CMD_NAME"
@@ -272,10 +248,10 @@ install_gemini() {
 install_codex() {
   global_harness_warning "Codex CLI"
   if ! command -v codex >/dev/null 2>&1; then
-    yellow "未检测到 codex。装好后执行：codex plugin marketplace add ${REPO_URL}，再在 /plugins 安装 open-wepig"; return
+    yellow "未检测到 codex。装好后执行：codex plugin marketplace add ${REPO_URL}，再在 /plugins 安装 wepig"; return
   fi
   if codex plugin marketplace add "$REPO_URL" >/dev/null 2>&1 || codex plugin marketplace add "$REPO_OWNER/$REPO_NAME" >/dev/null 2>&1; then
-    green "Codex marketplace 已注册。请在 Codex CLI 的 /plugins 中安装 open-wepig"
+    green "Codex marketplace 已注册。请在 Codex CLI 的 /plugins 中安装 wepig"
   else
     err "Codex marketplace 注册失败，请手动执行：codex plugin marketplace add $REPO_URL"
   fi
@@ -400,35 +376,92 @@ uninstall_opencode() {
 clean_rc() {
   for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
     [[ -f "$rc" ]] || continue
-    grep -qF '# open-wepig-skills' "$rc" || continue
-    cp "$rc" "$rc.bak.open-wepig"
-    if grep -vF '# open-wepig-skills' "$rc" > "$rc.tmp" && mv "$rc.tmp" "$rc"; then
-      green "已清理 ${rc}（备份 $rc.bak.open-wepig）"
+    grep -qF '# wepig-skills' "$rc" || continue
+    cp "$rc" "$rc.bak.wepig"
+    if grep -vF '# wepig-skills' "$rc" > "$rc.tmp" && mv "$rc.tmp" "$rc"; then
+      green "已清理 ${rc}（备份 $rc.bak.wepig）"
     else
       rm -f "$rc.tmp"; yellow "$rc 清理失败，保留原文件"
     fi
   done
 }
 
+# ---------- 组织初始化 ----------
+ensure_org() {
+  local orgs_json current selected count
+  orgs_json="$(node "$WES_ABS" orgs)" || return 1
+  current=""
+  [[ -f "$(target_context_file)" ]] && current="$(tr -d '[:space:]' < "$(target_context_file)")"
+  if [[ -n "$current" ]] && node -e 'const o=JSON.parse(process.argv[1]);process.exit(o.orgs.some(x=>`${x.org_type}:${x.org_id}`===process.argv[2])?0:1)' "$orgs_json" "$current"; then
+    return 0
+  fi
+  count="$(node -e 'const o=JSON.parse(process.argv[1]);process.stdout.write(String(o.orgs.length))' "$orgs_json")"
+  if [[ "$count" == "0" ]]; then err "当前 API Key 没有可访问组织"; return 1; fi
+  if [[ "$count" == "1" ]]; then
+    selected="$(node -e 'const o=JSON.parse(process.argv[1]).orgs[0];process.stdout.write(`${o.org_type}:${o.org_id}`)' "$orgs_json")"
+  else
+    node -e 'JSON.parse(process.argv[1]).orgs.forEach(o=>console.error(`${o.org_type}:${o.org_id}\t${o.name||""}`))' "$orgs_json" >&2
+    read_tty -rp "选择组织 TYPE:ID: " selected
+  fi
+  node "$WES_ABS" use "$selected"
+}
+
+# ---------- 旧版清理 ----------
+cleanup_legacy() {
+  unset OPEN_WEPIG_APPID OPEN_WEPIG_SECRET OPEN_WEPIG_TOKEN_URL
+  rm -f "$BINDIR/open-wepig-cli" "$HOME/.open-wepig.env"
+  rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/open-wepig"
+  if [[ -n "$PROJECT_DIR" ]]; then
+    rm -f "$PROJECT_DIR/.open-wepig.env" "$PROJECT_DIR/.claude/skills/open-wepig" "$PROJECT_DIR/.cursor/skills/open-wepig"
+  fi
+  rm -f "$HOME/.claude/skills/open-wepig" "$HOME/.cursor/skills/open-wepig"
+  if command -v claude >/dev/null 2>&1; then
+    claude plugin uninstall open-wepig@open-wepig-skills >/dev/null 2>&1 || true
+    claude plugin marketplace remove open-wepig-skills >/dev/null 2>&1 || true
+  fi
+  if command -v copilot >/dev/null 2>&1; then copilot plugin uninstall open-wepig@open-wepig-skills >/dev/null 2>&1 || true; fi
+  if command -v agy >/dev/null 2>&1; then agy plugin uninstall open-wepig >/dev/null 2>&1 || agy plugin remove open-wepig >/dev/null 2>&1 || true; fi
+  if command -v gemini >/dev/null 2>&1; then gemini extensions remove open-wepig >/dev/null 2>&1 || gemini extensions uninstall open-wepig >/dev/null 2>&1 || true; fi
+  if command -v codex >/dev/null 2>&1; then
+    codex plugin remove open-wepig >/dev/null 2>&1 || codex plugin uninstall open-wepig >/dev/null 2>&1 || true
+    codex plugin marketplace remove open-wepig-skills >/dev/null 2>&1 || true
+  fi
+  local old_repo="${XDG_DATA_HOME:-$HOME/.local/share}/open-wepig-skills"
+  local cfg="$HOME/.config/opencode/opencode.json"
+  if command -v jq >/dev/null 2>&1 && [[ -f "$cfg" ]]; then
+    local tmp; tmp="$(mktemp)"
+    if jq --arg p "file://$old_repo" '.plugin = ((.plugin // []) | map(select(. != $p)))' "$cfg" > "$tmp"; then mv "$tmp" "$cfg"; else rm -f "$tmp"; fi
+  fi
+  local rc
+  for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
+    [[ -f "$rc" ]] || continue
+    if grep -qE 'open-wepig-skills|\.open-wepig\.env|open-wepig/env' "$rc"; then
+      cp "$rc" "$rc.bak.open-wepig"
+      grep -vE 'open-wepig-skills|\.open-wepig\.env|open-wepig/env' "$rc" > "$rc.tmp" && mv "$rc.tmp" "$rc" || rm -f "$rc.tmp"
+    fi
+  done
+  find "${TMPDIR:-/tmp}" -maxdepth 1 -name 'open-wepig-token-*.json' -type f -delete 2>/dev/null || true
+  if [[ "$old_repo" != "$INSTALL_DIR" ]]; then rm -rf "$old_repo"; fi
+  green "旧版 open-wepig 已清理"
+}
+
 # ---------- 实测 ----------
 verify() {
-  cyan "验证鉴权与连通性..."
-  local log; log="$(mktemp -t open-wepig-test)"
-  local env_to_source="$ENV_FILE"
-  [[ -n "$PROJECT_DIR" ]] && env_to_source="$PROJECT_ENV_FILE"
+  cyan "验证鉴权、组织上下文与连通性..."
+  local log; log="$(mktemp -t wepig-test)"
   if ! command -v node >/dev/null 2>&1; then
-    yellow "未检测到 node，跳过实测。装好后执行：$CMD_NAME services"
+    err "未检测到 node，安装需要 Node >= 18"
+    rm -f "$log" 2>/dev/null || true
+    return 1
+  fi
+  if ensure_org && node "$WES_ABS" services >"$log" 2>&1; then
+    green "鉴权、组织与连通性正常"
     rm -f "$log" 2>/dev/null || true
     return 0
   fi
-  if node "$WES_ABS" services >"$log" 2>&1; then
-    green "鉴权与连通性正常"
-    rm -f "$log" 2>/dev/null || true
-    return 0
-  fi
-  err "实测失败（appid/secret 错误、网络不通或网关未授权）："
+  err "实测失败（API Key、组织权限、网络或网关异常）："
   cat "$log" 2>/dev/null || true
-  yellow "修正：编辑 $env_to_source 后重跑，或重新安装"
+  yellow "修正：编辑 $(target_env_file) 后重跑，或重新安装"
   rm -f "$log" 2>/dev/null || true
   return 1
 }
@@ -448,32 +481,20 @@ ask_install_scope() {
     proj="${proj:-.}"
     mkdir -p "$proj" || { err "无法创建项目目录: $proj"; exit 1; }
     PROJECT_DIR="$(cd "$proj" && pwd)" || { err "无法进入项目目录: $proj"; exit 1; }
-    PROJECT_ENV_FILE="$PROJECT_DIR/.open-wepig.env"
+    PROJECT_ENV_FILE="$PROJECT_DIR/.wepig.env"
     green "将安装到项目：$PROJECT_DIR"
   fi
 }
 
 # ---------- 安装流程 ----------
 do_install() {
-  cyan "open-wepig-skills 安装程序"
+  cyan "wepig-skills 安装程序"
   ask_install_scope
-  collect_auth
   sync_repo
+  collect_auth
   verify || exit 1
-
-  # 实测通过后再写入 env，避免留下无效配置
-  if [[ -n "$PROJECT_DIR" ]]; then
-    if [[ "$AUTH_REUSED" -eq 0 ]]; then
-      write_project_env
-    fi
-  else
-    if [[ "$AUTH_REUSED" -eq 1 ]]; then
-      migrate_env
-    else
-      write_env
-    fi
-  fi
-
+  configure_shell
+  cleanup_legacy
   write_wepig_wrapper
   echo
   echo "选择目标 harness（可多选，逗号分隔；输入 a 全选）："
@@ -493,7 +514,7 @@ do_install() {
   echo; green "安装完成。"
   if [[ -n "$PROJECT_DIR" ]]; then
     echo "当前终端执行以下命令立即生效：source ${PROJECT_ENV_FILE}"
-    echo "（项目级鉴权优先于全局 ~/.config/open-wepig/env）"
+    echo "（项目级鉴权优先于全局 ~/.config/wepig/env）"
   else
     echo "当前终端执行以下命令立即生效：source ${ENV_FILE}"
   fi
@@ -501,24 +522,12 @@ do_install() {
 
 # ---------- 更新流程 ----------
 do_update() {
-  cyan "open-wepig-skills 更新"
-  collect_auth
+  cyan "wepig-skills 更新"
   sync_repo
+  collect_auth
   verify || exit 1
-
-  # 实测通过后再写入/迁移 env
-  if [[ -n "$PROJECT_DIR" ]]; then
-    if [[ "$AUTH_REUSED" -eq 0 ]]; then
-      write_project_env
-    fi
-  else
-    if [[ "$AUTH_REUSED" -eq 1 ]]; then
-      migrate_env
-    else
-      write_env
-    fi
-  fi
-
+  configure_shell
+  cleanup_legacy
   write_wepig_wrapper
   echo
   update_claude; update_cursor; update_copilot; update_antigravity
@@ -533,7 +542,7 @@ do_update() {
 
 # ---------- 卸载流程 ----------
 do_uninstall() {
-  cyan "open-wepig-skills 卸载"
+  cyan "wepig-skills 卸载"
   if [[ -n "$PROJECT_DIR" ]]; then
     echo "将删除项目级内容："
     echo "  - $PROJECT_DIR/.claude/skills/$SKILL_NAME"
@@ -545,7 +554,7 @@ do_uninstall() {
     echo "  - 命令 $BINDIR/$CMD_NAME"
     echo "  - 各 harness 的 symlink / plugin 注册"
     echo "  - 鉴权文件 $ENV_FILE"
-    echo "  - shell 配置里的 open-wepig-skills 行（~/.zshrc、~/.bashrc，保留 .bak 备份）"
+    echo "  - shell 配置里的 wepig-skills 行（~/.zshrc、~/.bashrc，保留 .bak 备份）"
   fi
   read_tty -rp "确认卸载？[y/N] " confirm
   if [[ ! "$confirm" =~ ^[Yy]$ ]]; then yellow "已取消"; return; fi
@@ -558,7 +567,8 @@ do_uninstall() {
     rm -f "$BINDIR/$CMD_NAME" 2>/dev/null && green "已删命令 $BINDIR/$CMD_NAME" || true
     uninstall_claude; uninstall_cursor; uninstall_copilot; uninstall_antigravity
     uninstall_gemini; uninstall_codex; uninstall_opencode
-    rm -f "$ENV_FILE" "$HOME/.open-wepig.env" 2>/dev/null && green "已删 $ENV_FILE" || true
+    rm -f "$ENV_FILE" 2>/dev/null && green "已删 $ENV_FILE" || true
+    rm -rf "$ENV_DIR"
     clean_rc
 
     echo
@@ -604,7 +614,7 @@ parse_args() {
   if [[ -n "$PROJECT_DIR" ]]; then
     mkdir -p "$PROJECT_DIR" || { err "无法创建项目目录: $PROJECT_DIR"; exit 1; }
     PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)" || { err "无法进入项目目录: $PROJECT_DIR"; exit 1; }
-    PROJECT_ENV_FILE="$PROJECT_DIR/.open-wepig.env"
+    PROJECT_ENV_FILE="$PROJECT_DIR/.wepig.env"
   fi
 }
 

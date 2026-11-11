@@ -1,20 +1,20 @@
 {
-  "name": "open-wepig",
-  "description": "查询 open-wepig 后端数据，回答猪场养殖业务数据问题（配种、妊娠、分娩、断奶、动物档案、精液、流转、遗传、淘汰、考测、审计等）",
-  "version": "0.1.0",
+  "name": "wepig",
+  "description": "调用 wepig 猪场养殖业务 MCP 工具，支持的能力由 API Key、组织和后端工具决定",
+  "version": "1.0.0",
   "author": {
     "name": "wepigcn",
     "url": "https://github.com/wepigcn"
   },
-  "homepage": "https://github.com/wepigcn/open-wepig-skills",
-  "repository": "https://github.com/wepigcn/open-wepig-skills",
+  "homepage": "https://github.com/wepigcn/wepig-skills",
+  "repository": "https://github.com/wepigcn/wepig-skills",
   "license": "MIT",
   "keywords": [
-    "open-wepig",
+    "wepig",
     "养猪",
     "猪场",
     "养殖",
-    "数据查询",
+    "MCP 工具",
     "skills"
   ]
 }

@@ -1,22 +1,22 @@
 {
-  "name": "open-wepig-skills",
+  "name": "wepig-skills",
   "owner": {
     "name": "wepigcn",
     "url": "https://github.com/wepigcn"
   },
   "metadata": {
-    "description": "open-wepig 猪场养殖业务数据查询 skills",
-    "version": "0.1.0"
+    "description": "微猪生猪数字化管理平台 MCP 工具 skills",
+    "version": "1.0.0"
   },
   "plugins": [
     {
-      "name": "open-wepig",
+      "name": "wepig",
       "source": {
         "source": "url",
-        "url": "https://github.com/wepigcn/open-wepig-skills.git"
+        "url": "https://github.com/wepigcn/wepig-skills.git"
       },
-      "description": "查询 open-wepig 后端数据，回答猪场养殖业务数据问题",
-      "version": "0.1.0"
+      "description": "调用 wepig 猪场养殖业务 MCP 工具，支持的能力由 API Key 和组织决定",
+      "version": "1.0.0"
     }
   ]
 }

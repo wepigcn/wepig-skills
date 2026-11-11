@@ -1,6 +1,6 @@
 # query service 领域查询指引
 
-读取本文档后，回到 open-wepig 主流程继续执行：`endpoints` 发现接口，`detail` 看参数，`call` 调用。
+读取本文档后，回到 wepig 主流程继续执行：`endpoints` 发现接口，`detail` 看参数，`call` 调用。
 
 ## 领域 -> keyword
 

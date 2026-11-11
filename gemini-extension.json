@@ -1,6 +1,6 @@
 {
-  "name": "open-wepig",
-  "version": "0.1.0",
-  "description": "查询 open-wepig 猪场养殖业务数据",
+  "name": "wepig",
+  "version": "1.0.0",
+  "description": "调用 wepig 猪场养殖业务 MCP 工具",
   "contextFileName": "GEMINI.md"
 }

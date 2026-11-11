@@ -28,10 +28,10 @@ backstage 服务提供组织结构相关接口，用于查询集团、公司、�
 **示例：**
 ```bash
 # 查询所有集团
-open-wepig-cli call backstage_platform_list limit=100
+wepig call backstage_platform_list limit=100
 
 # 按名称搜索集团
-open-wepig-cli call backstage_platform_list name=微猪 limit=10
+wepig call backstage_platform_list name=微猪 limit=10
 ```
 
 ### backstage_company_list（公司列表）
@@ -49,13 +49,13 @@ open-wepig-cli call backstage_platform_list name=微猪 limit=10
 **示例：**
 ```bash
 # 查询所有公司
-open-wepig-cli call backstage_company_list limit=100
+wepig call backstage_company_list limit=100
 
 # 按名称搜索公司
-open-wepig-cli call backstage_company_list name=XX公司 limit=10
+wepig call backstage_company_list name=XX公司 limit=10
 
 # 查询指定父级下的公司
-open-wepig-cli call backstage_company_list parent_id=123 limit=50
+wepig call backstage_company_list parent_id=123 limit=50
 ```
 
 ### backstage_company_group_list（公司分组列表）
@@ -68,7 +68,7 @@ open-wepig-cli call backstage_company_list parent_id=123 limit=50
 **示例：**
 ```bash
 # 查询所有公司分组
-open-wepig-cli call backstage_company_group_list limit=100
+wepig call backstage_company_group_list limit=100
 ```
 
 ### backstage_farm_list（猪场列表）
@@ -88,16 +88,16 @@ open-wepig-cli call backstage_company_group_list limit=100
 **示例：**
 ```bash
 # 查询所有猪场
-open-wepig-cli call backstage_farm_list limit=100
+wepig call backstage_farm_list limit=100
 
 # 按名称搜索猪场
-open-wepig-cli call backstage_farm_list name=XX猪场 limit=10
+wepig call backstage_farm_list name=XX猪场 limit=10
 
 # 查询指定公司下的猪场
-open-wepig-cli call backstage_farm_list company_id=456 limit=50
+wepig call backstage_farm_list company_id=456 limit=50
 
 # 按猪场类型和状态查询
-open-wepig-cli call backstage_farm_list farm_type=育肥场 farm_status=营业中 limit=50
+wepig call backstage_farm_list farm_type=育肥场 farm_status=营业中 limit=50
 ```
 
 ### backstage_farm_group_list（猪场分组列表）
@@ -115,13 +115,13 @@ open-wepig-cli call backstage_farm_list farm_type=育肥场 farm_status=营业�
 **示例：**
 ```bash
 # 查询所有猪场分组
-open-wepig-cli call backstage_farm_group_list limit=100
+wepig call backstage_farm_group_list limit=100
 
 # 按名称搜索猪场分组
-open-wepig-cli call backstage_farm_group_list name=华北区 limit=10
+wepig call backstage_farm_group_list name=华北区 limit=10
 
 # 查询指定分组
-open-wepig-cli call backstage_farm_group_list group_id=789 limit=10
+wepig call backstage_farm_group_list group_id=789 limit=10
 ```
 
 ### backstage_org_limit_list（组织结构列表）
@@ -135,10 +135,10 @@ open-wepig-cli call backstage_farm_group_list group_id=789 limit=10
 **示例：**
 ```bash
 # 查询完整的组织结构树
-open-wepig-cli call backstage_org_limit_list
+wepig call backstage_org_limit_list
 
 # 指定最小节点类型
-open-wepig-cli call backstage_org_limit_list min_node_type=company
+wepig call backstage_org_limit_list min_node_type=company
 ```
 
 ## 使用说明

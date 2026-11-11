@@ -1,15 +1,15 @@
 {
-  "name": "open-wepig-skills",
+  "name": "wepig-skills",
   "owner": {
     "name": "wepigcn",
     "url": "https://github.com/wepigcn"
   },
   "plugins": [
     {
-      "name": "open-wepig",
-      "source": "./skills/open-wepig",
-      "description": "查询 open-wepig 猪场养殖业务数据",
-      "version": "0.1.0"
+      "name": "wepig",
+      "source": "./skills/wepig",
+      "description": "调用 wepig 猪场养殖业务 MCP 工具",
+      "version": "1.0.0"
     }
   ]
 }

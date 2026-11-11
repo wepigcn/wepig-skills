@@ -2,4 +2,8 @@
 .agents/skills
 .DS_Store
 
+# 项目级 wepig 凭证（install 脚本生成，含 API Key）
+.wepig.env
+.wepig.env.ps1
+
 docs/personal-api-key-auth.md
