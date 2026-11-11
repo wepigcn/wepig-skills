@@ -164,7 +164,7 @@ function normalizeOrgs(payload) {
 }
 
 async function listOrgs(baseUrl) {
-  return normalizeOrgs(JSON.parse(await rpc(T.orgs, {}, baseUrl)));
+  return normalizeOrgs(JSON.parse(await rpc(T.call, { name: T.orgs }, baseUrl)));
 }
 
 async function resolveOrg(baseUrl, explicitOrg) {
@@ -324,7 +324,7 @@ async function main() {
   }
   if (cmd === "orgs") {
     if (rest.length) die("orgs 不接受参数");
-    print(await rpc(T.orgs, {}, baseUrl));
+    print(await rpc(T.call, { name: T.orgs }, baseUrl));
     return;
   }
   if (cmd === "use") {
