@@ -128,7 +128,7 @@ function coerce(value) {
 }
 
 function parseOrg(value) {
-  const match = /^([A-Za-z][A-Za-z_]*):([1-9]\d*)$/.exec(value || "");
+  const match = /^([A-Za-z][A-Za-z_]*):(\d+)$/.exec(value || "");
   if (!match) throw new Error(`组织格式应为 TYPE:ID，例如 COMPANY:123；收到: ${value}`);
   return { user_org_type: match[1].toUpperCase(), user_org_id: Number(match[2]) };
 }
@@ -153,18 +153,35 @@ function writeFile(path, content) {
   try { chmodSync(path, 0o600); } catch { /* Windows ACL 不支持 POSIX mode */ }
 }
 
-function normalizeOrgs(payload) {
-  const orgs = payload?.orgs;
-  if (!Array.isArray(orgs)) throw new Error("backstage_user_orgs 响应缺少 orgs 数组");
-  return orgs.map((org) => ({
-    org_type: org.org_type,
-    org_id: Number(org.org_id),
-    name: org.name || "",
-  })).filter((org) => org.org_type && Number.isInteger(org.org_id) && org.org_id > 0);
+function normalizeOrgs(payload, outputSchema) {
+  function locate(value, schema) {
+    if (schema?.type === "array") return { value, items: schema.items };
+    for (const [key, child] of Object.entries(schema?.properties || {})) {
+      const found = locate(value?.[key], child);
+      if (found) return found;
+    }
+    return null;
+  }
+  const collection = locate(payload, outputSchema);
+  const properties = collection?.items?.properties;
+  if (!Array.isArray(collection?.value) || !properties) {
+    throw new Error("backstage_user_orgs 的 outputSchema 未定义组织数组及元素字段");
+  }
+  const typeKey = Object.keys(properties).find((key) => key === "org_type");
+  const idKey = Object.keys(properties).find((key) => key === "org_id");
+  const nameKey = Object.keys(properties).find((key) => key === "org_name" || key === "name");
+  if (!typeKey || !idKey || !nameKey) throw new Error("backstage_user_orgs 的 outputSchema 缺少组织类型、ID 或名称字段");
+  return collection.value.map((org) => ({
+    org_type: org[typeKey],
+    org_id: Number(org[idKey]),
+    name: org[nameKey] || "",
+  })).filter((org) => org.org_type && Number.isInteger(org.org_id) && org.org_id >= 0);
 }
 
 async function listOrgs(baseUrl) {
-  return normalizeOrgs(JSON.parse(await rpc(T.call, { name: T.orgs }, baseUrl)));
+  const detail = JSON.parse(await rpc(T.detail, { name: T.orgs }, baseUrl));
+  const payload = JSON.parse(await rpc(T.call, { name: T.orgs }, baseUrl));
+  return normalizeOrgs(payload, detail.outputSchema);
 }
 
 async function resolveOrg(baseUrl, explicitOrg) {
