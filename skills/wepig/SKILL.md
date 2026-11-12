@@ -48,9 +48,11 @@ export WEPIG_API_KEY=你的个人 API Key
 ```
 
 ```bash
-wepig orgs              # 调 backstage_user_orgs，列出当前 Key 可访问的组织
-wepig use COMPANY:123   # 持久切换当前组织
+wepig orgs                       # 调 backstage_user_orgs，列出当前 Key 可访问的组织
+wepig use <org_type>:<org_id>    # 用 orgs 返回的标识持久切换当前组织
 ```
+
+用户给出组织名称时，必须先在 `wepig orgs` 的结果中按名称匹配，取得对应的 `<org_type>:<org_id>`，再执行 `wepig use`；不要猜测组织类型或 ID，也不要把名称直接传给 `wepig use`。
 
 **执行 `tools`、`services`、`endpoints`、`detail` 或 `call` 前，必须先通过 `orgs` 并选择唯一组织。** CLI 会把 `user_org_type/user_org_id` 放进每次 MCP 请求（`tools/list` 的 `params`，工具调用的 `params.arguments`）；可用服务和工具由 API Key 与当前组织共同决定，切换组织后必须重新发现和确认工具。
 
@@ -105,7 +107,7 @@ wepig --org COMPANY:123 call <endpoint_name> key=value
 | --- | --- | --- |
 | `auth` | 浏览器授权并保存个人 API Key | `wepig auth` |
 | `orgs` | 列出当前 Key 可访问的组织 | `wepig orgs` |
-| `use` | 持久切换当前组织 | `wepig use COMPANY:123` |
+| `use` | 按 `orgs` 匹配的组织标识持久切换 | `wepig use <org_type>:<org_id>` |
 | `tools` | 列出当前 Key 和组织支持的 MCP 工具 | `wepig tools` |
 | `services` | 列出 service 及健康/接口数 | `wepig services` |
 | `endpoints` | 按 keyword/domain/service 发现接口 | `wepig endpoints --keyword breeding` |
