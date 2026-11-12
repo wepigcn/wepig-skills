@@ -1,6 +1,6 @@
 ---
 name: wepig
-description: 用于调用 wepig SaaS MCP 工具，处理猪场养殖业务。先用 tools 查看当前 API Key 和组织支持的工具，再按工具 schema 调用。
+description: 用于处理微猪科技（wepig）生猪数字化管理平台中的猪场养殖业务。
 ---
 
 # wepig 使用指南
