@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "wepig",
   "description": "调用 wepig 猪场养殖业务 MCP 工具，支持的能力由 API Key、组织和后端工具决定",
   "version": "1.0.1",
