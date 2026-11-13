@@ -8,7 +8,14 @@ import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, hostname, platform, arch } from "node:os";
 import { dirname, join } from "node:path";
 
-const VERSION = "1.0.0";
+// 版本号唯一来源：仓库根目录 VERSION 文件。
+const VERSION = (() => {
+  try {
+    return readFileSync(new URL("../VERSION", import.meta.url), "utf8").trim() || "unknown";
+  } catch {
+    return "unknown";
+  }
+})();
 const DEFAULT_WEPIG_URL = "https://hi-api.wepig.cn";
 const DEFAULT_TIMEOUT_MS = 60_000;
 const T = Object.freeze({
@@ -283,7 +290,8 @@ async function authenticate(baseUrl, envFile) {
 }
 
 function usage() {
-  process.stderr.write(`usage: wepig [--url URL] [--org TYPE:ID] <command> ...
+  process.stderr.write(`wepig ${VERSION}
+usage: wepig [--url URL] [--org TYPE:ID] <command> ...
 
 commands:
   auth [--file PATH]                        浏览器授权并保存个人 API Key
@@ -294,8 +302,10 @@ commands:
   endpoints [--keyword K] [--domain D] [--service S]
   detail <name>                             取接口完整参数 schema
   call <name> [key=value ...]               调用接口
+  version                                   打印版本号
 
 options:
+  --version       打印版本号（同 version）
   --url URL       后端根地址（默认 WEPIG_URL 或 ${DEFAULT_WEPIG_URL}）
   --org TYPE:ID   仅本次 tools/services/endpoints/detail/call 使用指定组织
 
@@ -341,6 +351,10 @@ async function main() {
     process.exit(argv.length === 0 ? 1 : 0);
   }
   const { baseUrl, org, cmd, rest } = parseGlobal(argv);
+  if (cmd === "version" || cmd === "--version" || cmd === "-v") {
+    process.stdout.write(`wepig ${VERSION}\n`);
+    return;
+  }
   if (org && !["tools", "services", "endpoints", "detail", "call"].includes(cmd)) die("--org 仅用于 tools/services/endpoints/detail/call");
 
   if (cmd === "auth") {

@@ -171,6 +171,13 @@ EOF
 }
 
 # ---------- 仓库同步 ----------
+# 版本号唯一来源：仓库根目录 VERSION 文件
+repo_version() {
+  local v=""
+  [[ -f "$INSTALL_DIR/VERSION" ]] && v="$(tr -d '[:space:]' < "$INSTALL_DIR/VERSION" 2>/dev/null || true)"
+  printf '%s' "${v:-unknown}"
+}
+
 sync_repo() {
   if [[ -d "$INSTALL_DIR/.git" ]]; then
     local cur; cur="$(git -C "$INSTALL_DIR" remote get-url origin 2>/dev/null || true)"
@@ -511,7 +518,7 @@ do_install() {
       7) install_opencode ;; *) err "忽略未知选项: $s" ;;
     esac
   done
-  echo; green "安装完成。"
+  echo; green "wepig-skills $(repo_version) 安装完成。"
   if [[ -n "$PROJECT_DIR" ]]; then
     echo "当前终端执行以下命令立即生效：source ${PROJECT_ENV_FILE}"
     echo "（项目级鉴权优先于全局 ~/.config/wepig/env）"
@@ -532,7 +539,7 @@ do_update() {
   echo
   update_claude; update_cursor; update_copilot; update_antigravity
   update_gemini; update_codex; update_opencode
-  echo; green "更新完成。"
+  echo; green "wepig-skills $(repo_version) 更新完成。"
   if [[ -n "$PROJECT_DIR" ]]; then
     echo "当前终端执行：source ${PROJECT_ENV_FILE}  刷新环境"
   else

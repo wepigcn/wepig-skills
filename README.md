@@ -2,7 +2,7 @@
 
 中文 | [English](README_en.md)
 
-给编码助手接入[微猪生猪数字化管理平台](https://wepig.cn) MCP 工具的 [Skills](https://docs.claude.com/en/docs/claude-code/skills) 集合。支持的能力由当前 API Key、组织和后端工具共同决定，不限于数据查询。当前版本 **1.0.0**。
+给编码助手接入[微猪生猪数字化管理平台](https://wepig.cn) MCP 工具的 [Skills](https://docs.claude.com/en/docs/claude-code/skills) 集合。支持的能力由当前 API Key、组织和后端工具共同决定，不限于数据查询。当前版本 **1.0.1**。
 
 ## 安装
 

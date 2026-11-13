@@ -1,6 +1,6 @@
 # wepig-skills — AI Agent 安装指南（国内 / Gitee 源）
 
-你是 AI 编程助手。按以下步骤为用户安装 wepig-skills（版本 1.0.0）。
+你是 AI 编程助手。按以下步骤为用户安装 wepig-skills（版本 1.0.1）。
 
 > 本文使用 **Gitee 镜像源**（`gitee.com/wepig/wepig-skills`），适合国内网络环境。
 > 安装脚本默认源是 GitHub 官方仓库（`github.com/wepigcn/wepig-skills`）；海外网络请改用 [install-guide_en.md](install-guide_en.md)。

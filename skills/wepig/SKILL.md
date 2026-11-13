@@ -113,6 +113,7 @@ wepig --org COMPANY:123 call <endpoint_name> key=value
 | `endpoints` | 按 keyword/domain/service 发现接口 | `wepig endpoints --keyword breeding` |
 | `detail` | 取单个接口完整参数 schema（含必填项与响应结构 `outputSchema`） | `wepig detail query_event_breeding` |
 | `call` | 调用接口 | `wepig call query_event_gilt_heat start_date=2026-06-01 end_date=2026-06-25` |
+| `version` | 打印 CLI 版本号（仓库根 `VERSION` 文件） | `wepig version` |
 
 ## 参数规则
 

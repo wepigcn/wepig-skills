@@ -1,6 +1,6 @@
 # wepig-skills — AI Agent Install Guide (International / GitHub source)
 
-You are an AI coding assistant. Follow these steps to install wepig-skills (version 1.0.0) for the user.
+You are an AI coding assistant. Follow these steps to install wepig-skills (version 1.0.1) for the user.
 
 > This guide uses the **GitHub upstream repository** (`github.com/wepigcn/wepig-skills`), which is also the install script default.
 > Users in mainland China should use [install-guide.md](install-guide.md) instead (Gitee mirror `gitee.com/wepig/wepig-skills`).

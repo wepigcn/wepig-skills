@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "微猪生猪数字化管理平台 MCP 工具 skills",
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "plugins": [
     {
@@ -16,7 +16,7 @@
         "url": "https://github.com/wepigcn/wepig-skills.git"
       },
       "description": "调用 wepig 猪场养殖业务 MCP 工具，支持的能力由 API Key 和组织决定",
-      "version": "1.0.0"
+      "version": "1.0.1"
     }
   ]
 }

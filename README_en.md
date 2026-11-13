@@ -2,7 +2,7 @@
 
 [中文](README.md) | English
 
-A collection of [Skills](https://docs.claude.com/en/docs/claude-code/skills) that gives coding assistants access to MCP tools on the [Wepig Pig digital management platform](https://wepig.cn). Capabilities are determined by the API key, selected organization, and available backend tools—not limited to queries. Current version: **1.0.0**.
+A collection of [Skills](https://docs.claude.com/en/docs/claude-code/skills) that gives coding assistants access to MCP tools on the [Wepig Pig digital management platform](https://wepig.cn). Capabilities are determined by the API key, selected organization, and available backend tools—not limited to queries. Current version: **1.0.1**.
 
 ## Installation
 

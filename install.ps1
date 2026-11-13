@@ -1,4 +1,4 @@
-# wepig-skills 1.0.0 安装、更新与卸载脚本 (Windows PowerShell)
+# wepig-skills 安装、更新与卸载脚本 (Windows PowerShell)
 # 用法：
 #   powershell -ExecutionPolicy Bypass -File install.ps1              # 安装
 #   powershell -ExecutionPolicy Bypass -File install.ps1 update        # 更新
@@ -21,7 +21,6 @@ $REPO_URL    = if ($env:WEPIG_REPO_URL)   { $env:WEPIG_REPO_URL }   else { "http
 $MARKETPLACE_NAME = "wepig-skills"
 $SKILL_NAME  = "wepig"
 $CMD_NAME    = "wepig"
-$VERSION     = "1.0.0"
 $LOCALAPPDATA = if ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } else { Join-Path $env:USERPROFILE "AppData\Local" }
 $INSTALL_DIR = if ($env:WEPIG_INSTALL_DIR) { $env:WEPIG_INSTALL_DIR } else { Join-Path $LOCALAPPDATA "wepig-skills" }
 $ENV_DIR     = Join-Path $env:USERPROFILE ".config\wepig"
@@ -35,6 +34,16 @@ $LEGACY_INSTALL_DIR = Join-Path $LOCALAPPDATA "open-wepig-skills"
 $LEGACY_ENV_DIR     = Join-Path $env:USERPROFILE ".config\open-wepig"
 $LEGACY_DOTENV      = Join-Path $env:USERPROFILE ".open-wepig.env"
 $LEGACY_CMD         = Join-Path $BINDIR "open-wepig-cli.cmd"
+
+# 版本号唯一来源：仓库根目录 VERSION 文件
+function Get-RepoVersion {
+  $file = Join-Path $INSTALL_DIR "VERSION"
+  if (Test-Path $file) {
+    $value = (Get-Content $file -Raw).Trim()
+    if ($value) { return $value }
+  }
+  return "unknown"
+}
 
 # 项目级安装参数（由参数解析填充）
 $PROJECT_DIR = $null
@@ -245,7 +254,7 @@ function Sync-Repo {
     git clone $REPO_URL $INSTALL_DIR
   }
   if (!(Test-Path $WEP_ABS)) {
-    Write-Err "未找到 $WEP_ABS，仓库内容不是 wepig-skills 1.0.0。"
+    Write-Err "未找到 $WEP_ABS，仓库内容不是 wepig-skills。"
     Write-Yellow "请确认仓库地址与分支，或删除 $INSTALL_DIR 后重装。"
     exit 1
   }
@@ -640,7 +649,7 @@ function Ask-InstallScope {
 
 # ---------- 安装流程 ----------
 function Do-Install {
-  Write-Cyan "wepig-skills $VERSION 安装程序"
+  Write-Cyan "wepig-skills 安装程序"
   Assert-Node
   Ask-InstallScope
   Sync-Repo
@@ -673,7 +682,7 @@ function Do-Install {
     }
   }
   Write-Host ""
-  Write-Green "安装完成。"
+  Write-Green "wepig-skills $(Get-RepoVersion) 安装完成。"
   if ($PROJECT_DIR) {
     Write-Host "当前终端执行以下命令立即生效：. $PROJECT_ENV_FILE"
     Write-Host "（项目级鉴权与组织上下文优先于全局 $ENV_FILE）"
@@ -685,7 +694,7 @@ function Do-Install {
 
 # ---------- 更新流程 ----------
 function Do-Update {
-  Write-Cyan "wepig-skills $VERSION 更新"
+  Write-Cyan "wepig-skills 更新"
   Assert-Node
   Sync-Repo
   Collect-Auth
@@ -699,7 +708,7 @@ function Do-Update {
   Update-Claude; Update-Cursor; Update-Copilot; Update-Antigravity
   Update-Gemini; Update-Codex; Update-OpenCode
   Write-Host ""
-  Write-Green "更新完成。"
+  Write-Green "wepig-skills $(Get-RepoVersion) 更新完成。"
   if ($PROJECT_DIR) {
     Write-Host "当前终端执行：. $PROJECT_ENV_FILE  刷新环境"
   } else {
