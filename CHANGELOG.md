@@ -4,6 +4,19 @@
 
 版本号唯一来源是仓库根目录 `VERSION` 文件；`plugin.json`、`gemini-extension.json`、各 marketplace 清单必须与它一致，由 `scripts/check-version.mjs` 校验。
 
+## [1.1.0] - 2026-11-13
+
+### Added
+
+- 组织上下文按后端地址分键（`<baseUrl>\t<TYPE:ID>`）：同一台机器上 prod 与 pre 的组织选择互不覆盖，调试 pre 不再让 prod 调用报 `403 Selected organization is unavailable`。旧版单行 `TYPE:ID` 仍作为兜底读取，下次 `wepig use` 时自动迁移。
+- `WEPIG_API_KEY` 环境变量与鉴权文件不一致时，向 stderr 输出一行提醒（环境变量优先，静默覆盖是排查 401 的高发原因）。
+- `scripts/orgs.mjs` 抽出组织归一化逻辑，配 `scripts/orgs.test.mjs` 回归测试（anyOf/oneOf/联合类型/深层嵌套/空数据/非法元素共 9 例）。
+- 安装脚本的实测环节增加两项：清单与 `VERSION` 一致性、仓库是否落后于上游。
+
+### Changed
+
+- CI 增加 `node --test scripts/`。
+
 ## [1.0.1] - 2026-11-13
 
 ### Added
@@ -30,4 +43,5 @@
 
 首个个人 API Key 版本：`wepig auth`、`wepig orgs`、`wepig use`、`wepig tools/services/endpoints/detail/call`。旧 `APPID/SECRET` 凭证、`/ucenter/token` 换 token、`/open/mcp` 路径与 `open-wepig` 命名全部废弃。
 
+[1.1.0]: https://github.com/wepigcn/wepig-skills/compare/wepig--v1.0.1...wepig--v1.1.0
 [1.0.1]: https://github.com/wepigcn/wepig-skills/compare/wepig--v1.0.0...wepig--v1.0.1

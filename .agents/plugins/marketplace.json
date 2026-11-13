@@ -9,7 +9,7 @@
       "name": "wepig",
       "source": "./skills/wepig",
       "description": "调用 wepig 猪场养殖业务 MCP 工具",
-      "version": "1.0.1"
+      "version": "1.1.0"
     }
   ]
 }

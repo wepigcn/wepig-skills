@@ -463,14 +463,30 @@ verify() {
   fi
   if ensure_org && node "$WES_ABS" services >"$log" 2>&1; then
     green "鉴权、组织与连通性正常"
+  else
+    err "实测失败（API Key、组织权限、网络或网关异常）："
+    cat "$log" 2>/dev/null || true
+    yellow "修正：编辑 $(target_env_file) 后重跑，或重新安装"
     rm -f "$log" 2>/dev/null || true
-    return 0
+    return 1
   fi
-  err "实测失败（API Key、组织权限、网络或网关异常）："
-  cat "$log" 2>/dev/null || true
-  yellow "修正：编辑 $(target_env_file) 后重跑，或重新安装"
+  if node "$INSTALL_DIR/scripts/check-version.mjs" >"$log" 2>&1; then
+    green "版本号一致：$(repo_version)"
+  else
+    yellow "版本号不一致（清单与 VERSION 不同）："
+    cat "$log" 2>/dev/null || true
+  fi
+  if node "$WES_ABS" check >"$log" 2>&1; then
+    if grep -q '"up_to_date": true' "$log"; then
+      green "已是仓库最新提交"
+    else
+      yellow "仓库有新提交，可执行 bash install.sh update 更新"
+    fi
+  else
+    yellow "跳过更新检查（无法从 origin 拉取）"
+  fi
   rm -f "$log" 2>/dev/null || true
-  return 1
+  return 0
 }
 
 # 交互式安装范围选择（命令行已传 --project 时跳过）

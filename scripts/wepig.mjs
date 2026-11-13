@@ -9,6 +9,8 @@ import { homedir, hostname, platform, arch } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { normalizeOrgs } from "./orgs.mjs";
+
 // 版本号唯一来源：仓库根目录 VERSION 文件。
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const VERSION = (() => {
@@ -43,20 +45,37 @@ function die(message) {
   process.exit(1);
 }
 
-function apiKey() {
-  if (process.env.WEPIG_API_KEY) return process.env.WEPIG_API_KEY;
+function readApiKeyFile() {
   try {
     const content = readFileSync(defaultEnvFile, "utf8");
     const match = /(?:export\s+WEPIG_API_KEY|\$env:WEPIG_API_KEY)\s*=\s*(?:'((?:[^']|'\\'')+)'|([^\r\n]+))/.exec(content);
     if (match) {
-      const key = match[1] !== undefined
+      return match[1] !== undefined
         ? match[1].replaceAll("'\\''", "'").replaceAll("''", "'")
         : match[2].trim();
-      process.env.WEPIG_API_KEY = key;
-      return key;
     }
   } catch (error) {
     if (error?.code !== "ENOENT") throw new Error(`无法读取鉴权文件 ${defaultEnvFile}: ${error?.message || error}`);
+  }
+  return null;
+}
+
+let apiKeyShadowWarned = false;
+
+function apiKey() {
+  const fromEnv = process.env.WEPIG_API_KEY;
+  const fromFile = readApiKeyFile();
+  if (fromEnv) {
+    // 环境变量优先，但静默覆盖鉴权文件是排查 401 时最容易踩的坑。
+    if (fromFile && fromFile !== fromEnv && !apiKeyShadowWarned) {
+      apiKeyShadowWarned = true;
+      logErr(`环境变量 WEPIG_API_KEY 覆盖了 ${defaultEnvFile} 中的 Key（两者不同）；若不是本意，请先 unset WEPIG_API_KEY`);
+    }
+    return fromEnv;
+  }
+  if (fromFile) {
+    process.env.WEPIG_API_KEY = fromFile;
+    return fromFile;
   }
   die("缺少 WEPIG_API_KEY；请执行 wepig auth 或手动配置个人 API Key");
 }
@@ -146,14 +165,48 @@ function orgValue(org) {
   return `${org.user_org_type}:${org.user_org_id}`;
 }
 
-function readContext() {
+const normalizeBaseUrl = (url) => url.replace(/\/+$/, "");
+
+// 组织上下文按后端地址分键：同一台机器上 prod 与 pre 互不覆盖。
+// 文件格式为 “<baseUrl>\t<TYPE:ID>” 每行一条；旧版的单行 “TYPE:ID” 视为无地址的兜底值。
+function readContext(baseUrl) {
+  let content;
   try {
-    const value = readFileSync(contextFile, "utf8").trim();
-    return value ? parseOrg(value) : null;
+    content = readFileSync(contextFile, "utf8");
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     throw new Error(`无法读取组织上下文 ${contextFile}: ${error?.message || error}`);
   }
+  const base = normalizeBaseUrl(baseUrl);
+  let legacy = null;
+  for (const raw of content.split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    const tab = line.indexOf("\t");
+    if (tab === -1) {
+      legacy ??= line;
+      continue;
+    }
+    if (normalizeBaseUrl(line.slice(0, tab)) === base) return parseOrg(line.slice(tab + 1).trim());
+  }
+  return legacy ? parseOrg(legacy) : null;
+}
+
+function writeContext(baseUrl, value) {
+  const base = normalizeBaseUrl(baseUrl);
+  let lines = [];
+  try {
+    lines = readFileSync(contextFile, "utf8").split("\n");
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw new Error(`无法读取组织上下文 ${contextFile}: ${error?.message || error}`);
+  }
+  const kept = lines.map((line) => line.trim()).filter((line) => {
+    if (!line || line.startsWith("#")) return false;
+    const tab = line.indexOf("\t");
+    return tab !== -1 && normalizeBaseUrl(line.slice(0, tab)) !== base;
+  });
+  kept.push(`${base}\t${value}`);
+  writeFile(contextFile, `${kept.join("\n")}\n`);
 }
 
 function writeFile(path, content) {
@@ -162,39 +215,6 @@ function writeFile(path, content) {
   try { chmodSync(path, 0o600); } catch { /* Windows ACL 不支持 POSIX mode */ }
 }
 
-function normalizeOrgs(payload, outputSchema) {
-  function locate(value, schema) {
-    if (!schema) return null;
-    const type = schema.type;
-    if (type === "array" || (Array.isArray(type) && type.includes("array"))) {
-      return Array.isArray(value) ? { value, items: schema.items } : null;
-    }
-    // pydantic v2 的 Optional[T] 会生成 anyOf/oneOf，数组类型可能被包在分支里。
-    for (const branch of [...(schema.anyOf || []), ...(schema.oneOf || [])]) {
-      const found = locate(value, branch);
-      if (found) return found;
-    }
-    for (const [key, child] of Object.entries(schema?.properties || {})) {
-      const found = locate(value?.[key], child);
-      if (found) return found;
-    }
-    return null;
-  }
-  const collection = locate(payload, outputSchema);
-  const properties = collection?.items?.properties;
-  if (!Array.isArray(collection?.value) || !properties) {
-    throw new Error("backstage_user_orgs 的 outputSchema 未定义组织数组及元素字段");
-  }
-  const typeKey = Object.keys(properties).find((key) => key === "org_type");
-  const idKey = Object.keys(properties).find((key) => key === "org_id");
-  const nameKey = Object.keys(properties).find((key) => key === "org_name" || key === "name");
-  if (!typeKey || !idKey || !nameKey) throw new Error("backstage_user_orgs 的 outputSchema 缺少组织类型、ID 或名称字段");
-  return collection.value.map((org) => ({
-    org_type: org[typeKey],
-    org_id: Number(org[idKey]),
-    name: org[nameKey] || "",
-  })).filter((org) => org.org_type && Number.isInteger(org.org_id) && org.org_id >= 0);
-}
 
 async function listOrgs(baseUrl) {
   const detail = JSON.parse(await rpc(T.detail, { name: T.orgs }, baseUrl));
@@ -249,7 +269,7 @@ function checkUpdate() {
 async function resolveOrg(baseUrl, explicitOrg) {
   if (explicitOrg) return parseOrg(explicitOrg);
   if (process.env.WEPIG_ORG) return parseOrg(process.env.WEPIG_ORG);
-  const cached = readContext();
+  const cached = readContext(baseUrl);
   if (cached) return cached;
   const orgs = await listOrgs(baseUrl);
   if (orgs.length === 1) {
@@ -425,7 +445,7 @@ async function main() {
     const orgs = await listOrgs(baseUrl);
     const match = orgs.find((item) => item.org_type === selected.user_org_type && item.org_id === selected.user_org_id);
     if (!match) die(`当前 API Key 无权访问 ${orgValue(selected)}`);
-    writeFile(contextFile, `${orgValue(selected)}\n`);
+    writeContext(baseUrl, orgValue(selected));
     print(JSON.stringify({ org: orgValue(selected), name: match.name }));
     return;
   }

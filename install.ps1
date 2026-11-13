@@ -306,14 +306,32 @@ function Initialize-Org {
 function Verify {
   Write-Cyan "验证鉴权与连通性..."
   $output = & node $WEP_ABS services 2>&1
-  if ($LASTEXITCODE -eq 0) {
-    Write-Green "鉴权与连通性正常"
-    return
+  if ($LASTEXITCODE -ne 0) {
+    Write-Err "实测失败（API Key 无效、网络不通或网关未授权）："
+    Write-Host ($output | Out-String)
+    Write-Yellow "修正：编辑 $(Get-TargetEnvFile) 后重跑，或重新安装"
+    exit 1
   }
-  Write-Err "实测失败（API Key 无效、网络不通或网关未授权）："
-  Write-Host ($output | Out-String)
-  Write-Yellow "修正：编辑 $(Get-TargetEnvFile) 后重跑，或重新安装"
-  exit 1
+  Write-Green "鉴权与连通性正常"
+
+  $versionCheck = & node (Join-Path $INSTALL_DIR "scripts\check-version.mjs") 2>&1
+  if ($LASTEXITCODE -eq 0) {
+    Write-Green "版本号一致：$(Get-RepoVersion)"
+  } else {
+    Write-Yellow "版本号不一致（清单与 VERSION 不同）："
+    Write-Host ($versionCheck | Out-String)
+  }
+
+  $updateCheck = & node $WEP_ABS check 2>&1
+  if ($LASTEXITCODE -eq 0) {
+    if (($updateCheck | Out-String) -match '"up_to_date": true') {
+      Write-Green "已是仓库最新提交"
+    } else {
+      Write-Yellow "仓库有新提交，可执行 install.ps1 update 更新"
+    }
+  } else {
+    Write-Yellow "跳过更新检查（无法从 origin 拉取）"
+  }
 }
 
 # ---------- 旧 open-wepig 清理 ----------
