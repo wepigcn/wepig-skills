@@ -155,7 +155,16 @@ function writeFile(path, content) {
 
 function normalizeOrgs(payload, outputSchema) {
   function locate(value, schema) {
-    if (schema?.type === "array") return { value, items: schema.items };
+    if (!schema) return null;
+    const type = schema.type;
+    if (type === "array" || (Array.isArray(type) && type.includes("array"))) {
+      return Array.isArray(value) ? { value, items: schema.items } : null;
+    }
+    // pydantic v2 的 Optional[T] 会生成 anyOf/oneOf，数组类型可能被包在分支里。
+    for (const branch of [...(schema.anyOf || []), ...(schema.oneOf || [])]) {
+      const found = locate(value, branch);
+      if (found) return found;
+    }
     for (const [key, child] of Object.entries(schema?.properties || {})) {
       const found = locate(value?.[key], child);
       if (found) return found;
