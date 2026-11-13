@@ -114,6 +114,7 @@ wepig --org COMPANY:123 call <endpoint_name> key=value
 | `detail` | 取单个接口完整参数 schema（含必填项与响应结构 `outputSchema`） | `wepig detail query_event_breeding` |
 | `call` | 调用接口 | `wepig call query_event_gilt_heat start_date=2026-06-01 end_date=2026-06-25` |
 | `version` | 打印 CLI 版本号（仓库根 `VERSION` 文件） | `wepig version` |
+| `check` | 检查 Skill/CLI 是否有新版本（`git fetch` 后比较上游 `VERSION`） | `wepig check` |
 
 ## 参数规则
 

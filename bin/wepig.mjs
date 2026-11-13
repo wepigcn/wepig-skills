@@ -2,13 +2,15 @@
 // wepig CLI：设备授权、本地组织上下文和 /mcp JSON-RPC transport。
 // 零运行时依赖，需要 Node >= 18。
 
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, hostname, platform, arch } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // 版本号唯一来源：仓库根目录 VERSION 文件。
+const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const VERSION = (() => {
   try {
     return readFileSync(new URL("../VERSION", import.meta.url), "utf8").trim() || "unknown";
@@ -200,6 +202,50 @@ async function listOrgs(baseUrl) {
   return normalizeOrgs(payload, detail.outputSchema);
 }
 
+function gitOut(args) {
+  return execFileSync("git", ["-C", repoRoot, ...args], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim();
+}
+
+// 判断本地 Skill/CLI 是否需要升级：拉取上游后用 VERSION 与提交数比较。
+function checkUpdate() {
+  try {
+    gitOut(["rev-parse", "HEAD"]);
+  } catch (error) {
+    throw new Error(`当前安装不是 git 仓库，无法检查更新：${repoRoot}（${error?.stderr?.toString().trim() || error?.message || error}）`);
+  }
+  try {
+    gitOut(["fetch", "--quiet", "origin"]);
+  } catch (error) {
+    throw new Error(`无法从 origin 拉取（${error?.stderr?.toString().trim() || error?.message || error}）`);
+  }
+  let upstream = "origin/main";
+  try {
+    upstream = gitOut(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"]);
+  } catch {
+    // 无上游跟踪分支时退回 origin/main
+  }
+  const behind = Number(gitOut(["rev-list", "--count", `HEAD..${upstream}`]));
+  const ahead = Number(gitOut(["rev-list", "--count", `${upstream}..HEAD`]));
+  let latest;
+  try {
+    latest = gitOut(["show", `${upstream}:VERSION`]) || "unknown";
+  } catch {
+    latest = "unknown";
+  }
+  return {
+    installed: VERSION,
+    latest,
+    up_to_date: behind === 0,
+    commits_behind: behind,
+    commits_ahead: ahead,
+    upstream,
+    repo: repoRoot,
+  };
+}
+
 async function resolveOrg(baseUrl, explicitOrg) {
   if (explicitOrg) return parseOrg(explicitOrg);
   if (process.env.WEPIG_ORG) return parseOrg(process.env.WEPIG_ORG);
@@ -303,6 +349,7 @@ commands:
   detail <name>                             取接口完整参数 schema
   call <name> [key=value ...]               调用接口
   version                                   打印版本号
+  check                                     检查是否有新版本（git fetch 后比较上游 VERSION）
 
 options:
   --version       打印版本号（同 version）
@@ -353,6 +400,11 @@ async function main() {
   const { baseUrl, org, cmd, rest } = parseGlobal(argv);
   if (cmd === "version" || cmd === "--version" || cmd === "-v") {
     process.stdout.write(`wepig ${VERSION}\n`);
+    return;
+  }
+  if (cmd === "check") {
+    if (rest.length) die("check 不接受参数");
+    print(JSON.stringify(checkUpdate()));
     return;
   }
   if (org && !["tools", "services", "endpoints", "detail", "call"].includes(cmd)) die("--org 仅用于 tools/services/endpoints/detail/call");
