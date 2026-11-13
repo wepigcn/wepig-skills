@@ -436,7 +436,9 @@ async function main() {
   }
   if (cmd === "orgs") {
     if (rest.length) die("orgs 不接受参数");
-    print(await rpc(T.call, { name: T.orgs }, baseUrl));
+    // 输出归一化格式 { orgs: [{ org_type, org_id, name }] }，供脚本解析
+    const orgs = await listOrgs(baseUrl);
+    print(JSON.stringify({ orgs }));
     return;
   }
   if (cmd === "use") {

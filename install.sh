@@ -398,7 +398,25 @@ ensure_org() {
   local orgs_json current selected count
   orgs_json="$(node "$WES_ABS" orgs)" || return 1
   current=""
-  [[ -f "$(target_context_file)" ]] && current="$(tr -d '[:space:]' < "$(target_context_file)")"
+  # context 文件新格式："<baseUrl>\t<TYPE:ID>" 每行一条；旧格式：单行 "TYPE:ID"
+  if [[ -f "$(target_context_file)" ]]; then
+    current="$(node -e '
+      const fs = require("fs");
+      const base = (process.env.WEPIG_URL || "https://hi-api.wepig.cn").replace(/\/+$/, "");
+      const content = fs.readFileSync(process.argv[1], "utf8");
+      let legacy = null;
+      for (const raw of content.split("\n")) {
+        const line = raw.trim();
+        if (!line || line.startsWith("#")) continue;
+        const tab = line.indexOf("\t");
+        if (tab < 0) { if (legacy === null) legacy = line; continue; }
+        if (line.slice(0, tab).replace(/\/+$/, "") === base) {
+          process.stdout.write(line.slice(tab + 1).trim()); process.exit(0);
+        }
+      }
+      if (legacy !== null) process.stdout.write(legacy);
+    ' "$(target_context_file)" 2>/dev/null)"
+  fi
   if [[ -n "$current" ]] && node -e 'const o=JSON.parse(process.argv[1]);process.exit(o.orgs.some(x=>`${x.org_type}:${x.org_id}`===process.argv[2])?0:1)' "$orgs_json" "$current"; then
     return 0
   fi
