@@ -1,0 +1,45 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+    tags: ["*"]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 语法检查
+        run: |
+          node --check scripts/wepig.mjs
+          node --check scripts/check-version.mjs
+
+      - name: 版本号一致性（VERSION 为唯一来源）
+        run: node scripts/check-version.mjs
+
+      - name: tag 与 VERSION 一致
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          [ "$tag" = "wepig--v$(cat VERSION)" ] || {
+            echo "tag $tag 与 VERSION=$(cat VERSION) 不匹配，应为 wepig--v$(cat VERSION)"; exit 1; }
+          echo "tag $tag 与 VERSION 一致"
+
+      - name: JSON 合法性
+        run: |
+          for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json \
+                   .agents/plugins/marketplace.json gemini-extension.json; do
+            node -e "JSON.parse(require('node:fs').readFileSync('$f','utf8'))" && echo "ok $f"
+          done
+
+      - name: 插件清单校验（含目录提交检查）
+        run: |
+          npm install -g @anthropic-ai/claude-code >/dev/null
+          claude plugin validate . --profile directory --strict

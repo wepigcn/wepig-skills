@@ -26,7 +26,7 @@ $INSTALL_DIR = if ($env:WEPIG_INSTALL_DIR) { $env:WEPIG_INSTALL_DIR } else { Joi
 $ENV_DIR     = Join-Path $env:USERPROFILE ".config\wepig"
 $ENV_FILE    = Join-Path $ENV_DIR "env.ps1"
 $SKILL_SRC   = Join-Path $INSTALL_DIR "skills\$SKILL_NAME"
-$WEP_ABS     = Join-Path $INSTALL_DIR "bin\wepig.mjs"
+$WEP_ABS     = Join-Path $INSTALL_DIR "scripts\wepig.mjs"
 $BINDIR      = Join-Path $env:USERPROFILE ".local\bin"
 
 # 旧 open-wepig 安装位置（仅清理，绝不用于新版验证）

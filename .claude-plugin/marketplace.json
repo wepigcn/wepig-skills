@@ -16,8 +16,7 @@
         "source": "url",
         "url": "https://github.com/wepigcn/wepig-skills.git"
       },
-      "description": "调用 wepig 猪场养殖业务 MCP 工具，支持的能力由 API Key 和组织决定",
-      "version": "1.0.1"
+      "description": "调用 wepig 猪场养殖业务 MCP 工具，支持的能力由 API Key 和组织决定"
     }
   ]
 }

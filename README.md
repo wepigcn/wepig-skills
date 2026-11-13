@@ -64,11 +64,11 @@ irm https://gitee.com/wepig/wepig-skills/raw/main/install.ps1 | iex
 ```bash
 git clone https://gitee.com/wepig/wepig-skills.git ~/.local/share/wepig-skills
 # 授权（写入 ~/.config/wepig/env）
-node ~/.local/share/wepig-skills/bin/wepig.mjs auth
+node ~/.local/share/wepig-skills/scripts/wepig.mjs auth
 # 或手动配置个人 API Key
 export WEPIG_API_KEY=你的个人APIKey
 # 直接用绝对路径调用，或跑一次 bash install.sh 生成 wepig 命令
-node ~/.local/share/wepig-skills/bin/wepig.mjs services
+node ~/.local/share/wepig-skills/scripts/wepig.mjs services
 ```
 
 **Windows：**
@@ -76,11 +76,11 @@ node ~/.local/share/wepig-skills/bin/wepig.mjs services
 ```powershell
 git clone https://gitee.com/wepig/wepig-skills.git $env:LOCALAPPDATA\wepig-skills
 # 授权
-node $env:LOCALAPPDATA\wepig-skills\bin\wepig.mjs auth
+node $env:LOCALAPPDATA\wepig-skills\scripts\wepig.mjs auth
 # 或手动配置个人 API Key
 $env:WEPIG_API_KEY = "你的个人APIKey"
 # 直接用绝对路径调用，或跑一次 install.ps1 生成 wepig 命令
-node $env:LOCALAPPDATA\wepig-skills\bin\wepig.mjs services
+node $env:LOCALAPPDATA\wepig-skills\scripts\wepig.mjs services
 ```
 
 ## 鉴权与组织

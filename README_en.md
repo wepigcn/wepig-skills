@@ -70,11 +70,11 @@ The repository source is injected via environment variables; the defaults below 
 ```bash
 git clone https://github.com/wepigcn/wepig-skills.git ~/.local/share/wepig-skills
 # Authorize (writes ~/.config/wepig/env)
-node ~/.local/share/wepig-skills/bin/wepig.mjs auth
+node ~/.local/share/wepig-skills/scripts/wepig.mjs auth
 # Or configure a personal API key manually
 export WEPIG_API_KEY=your_api_key
 # Call directly, or run bash install.sh to generate the wepig command
-node ~/.local/share/wepig-skills/bin/wepig.mjs services
+node ~/.local/share/wepig-skills/scripts/wepig.mjs services
 ```
 
 **Windows:**
@@ -82,11 +82,11 @@ node ~/.local/share/wepig-skills/bin/wepig.mjs services
 ```powershell
 git clone https://github.com/wepigcn/wepig-skills.git $env:LOCALAPPDATA\wepig-skills
 # Authorize
-node $env:LOCALAPPDATA\wepig-skills\bin\wepig.mjs auth
+node $env:LOCALAPPDATA\wepig-skills\scripts\wepig.mjs auth
 # Or configure a personal API key manually
 $env:WEPIG_API_KEY = "your_api_key"
 # Call directly, or run install.ps1 to generate the wepig command
-node $env:LOCALAPPDATA\wepig-skills\bin\wepig.mjs services
+node $env:LOCALAPPDATA\wepig-skills\scripts\wepig.mjs services
 ```
 
 ## Authentication and organizations
