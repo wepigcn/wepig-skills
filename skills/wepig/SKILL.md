@@ -21,21 +21,22 @@ description: 用于处理微猪科技（wepig）生猪数字化管理平台中�
 
 ## 鉴权
 
-默认用浏览器授权，无需手工拷贝凭证：
+每个飞书用户使用各自的 API Key：CLI 会自动读取 cc-connect 注入的 `CC_SESSION_KEY`
+（格式 `feishu:<chat_id>:<user_id>`），把鉴权文件写到 `~/.config/wepig/users/<user_id>/env`，
+组织上下文也保存在同一目录。非 cc-connect 环境仍使用 `~/.config/wepig`。
+
+飞书里用两步授权，避免命令阻塞：
 
 ```bash
-wepig auth
+wepig auth start   # 输出 verification_url 和 user_code；把 verification_url 原样发给用户
+wepig auth poll    # 用户浏览器确认后执行，Key 保存到该用户自己的目录
 ```
 
-命令会打印授权地址和授权码，并在浏览器打开确认页；确认后个人 API Key 自动写入 `~/.config/wepig/env`（权限 600）。
+`auth poll` 会一直轮询到用户确认（最长 10 分钟），执行时请把 Bash 超时设为 600000ms。
 
-首次使用或当前用户没有可用 API Key 时，先进行登录引导，不要直接执行查询命令：说明需要授权，执行 `wepig auth`，引导用户在自动打开的浏览器页面确认授权；若浏览器未打开，将命令输出的授权地址原样发给用户。授权完成后继续选择组织和查询。
+首次使用或当前用户没有可用 API Key 时，先进行登录引导，不要直接执行查询命令：说明需要授权，执行 `wepig auth start`，将返回的 `verification_url` 原样发给用户，并引导用户打开链接、使用 `user_code` 完成确认；用户确认后执行 `wepig auth poll`，授权成功再继续选择组织和查询。
 
-备选：已有个人 API Key 时直接配置环境变量。
-
-```bash
-export WEPIG_API_KEY=你的个人 API Key
-```
+备选：已有个人 API Key 时配置 WEPIG_API_KEY。注意环境变量优先于文件且对所有用户生效，不要全局设置。
 
 ## 组织上下文
 
@@ -147,4 +148,5 @@ wepig --org COMPANY:123 call <endpoint_name> key=value
 | `WEPIG_ORG` | 当前组织，优先级低于 `--org`、高于本地 context |
 | `WEPIG_URL` | 后端根地址，默认 `https://hi-api.wepig.cn` |
 | `WEPIG_TIMEOUT` | 请求超时毫秒，默认 60000 |
+| `WEPIG_CONFIG_DIR` | 配置目录；检测到 `CC_SESSION_KEY` 时自动为 `~/.config/wepig/users/<user_id>` |
 | `WEPIG_CONTEXT_FILE` | 组织上下文文件路径，默认 `~/.config/wepig/context` |

@@ -4,7 +4,7 @@
 
 import { execFileSync, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { homedir, hostname, platform, arch } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,8 +30,15 @@ const T = Object.freeze({
   call: "call_endpoint",
 });
 const RESERVED = new Set(["user_id", "user_org_type", "user_org_id"]);
+// 按飞书用户隔离：cc-connect 注入 CC_SESSION_KEY=feishu:<chat_id>:<user_id>
+const sessionKey = process.env.CC_SESSION_KEY || "";
+const feishuUser = (() => {
+  const m = /(?:^|:)feishu:([^:]+):([^:]+)$/.exec(sessionKey);
+  return m ? m[2] : null;
+})();
+const configBase = join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "wepig");
 const configDir = process.env.WEPIG_CONFIG_DIR ||
-  join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "wepig");
+  (feishuUser ? join(configBase, "users", feishuUser) : configBase);
 const contextFile = process.env.WEPIG_CONTEXT_FILE || join(configDir, "context");
 const defaultEnvFile = join(configDir, process.platform === "win32" ? "env.ps1" : "env");
 const timeoutMs = Number(process.env.WEPIG_TIMEOUT || DEFAULT_TIMEOUT_MS);
@@ -314,7 +321,9 @@ function saveApiKey(path, key) {
 
 const sleep = (seconds) => new Promise((resolve) => setTimeout(resolve, seconds * 1000));
 
-async function authenticate(baseUrl, envFile) {
+const pendingAuthFile = join(configDir, "auth-pending.json");
+
+async function authStart(baseUrl) {
   const created = unwrapApi(await request(`${baseUrl}/ms-system/user_auth/device/code`, {
     body: {
       client_id: "wepig-cli",
@@ -328,16 +337,29 @@ async function authenticate(baseUrl, envFile) {
   if (!created.device_code || !created.user_code) throw new Error("设备授权响应缺少 device_code 或 user_code");
   const verificationUrl = created.verification_uri_complete;
   if (!verificationUrl) throw new Error("服务端未返回 verification_uri_complete");
-  logErr(`请在浏览器中确认授权，授权码：${created.user_code}`);
-  logErr(verificationUrl);
-  openBrowser(verificationUrl);
+  const expiresIn = Number(created.expires_in || 600);
+  writeFile(pendingAuthFile, JSON.stringify({
+    base_url: baseUrl,
+    device_code: created.device_code,
+    interval: Math.max(1, Number(created.interval || 5)),
+    expires_at: Date.now() + expiresIn * 1000,
+  }));
+  return { verification_url: verificationUrl, user_code: created.user_code, expires_in: expiresIn };
+}
 
-  const deadline = Date.now() + Number(created.expires_in || 600) * 1000;
-  let interval = Math.max(1, Number(created.interval || 5));
-  while (Date.now() < deadline) {
+async function authPoll(envFile) {
+  let pending;
+  try {
+    pending = JSON.parse(readFileSync(pendingAuthFile, "utf8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") throw new Error("没有待完成的授权，请先执行 wepig auth start");
+    throw error;
+  }
+  let interval = pending.interval;
+  while (Date.now() < pending.expires_at) {
     await sleep(interval);
-    const result = unwrapApi(await request(`${baseUrl}/ms-system/user_auth/device/token`, {
-      body: { device_code: created.device_code },
+    const result = unwrapApi(await request(`${pending.base_url}/ms-system/user_auth/device/token`, {
+      body: { device_code: pending.device_code },
     }));
     if (result.status === "slow_down") {
       interval = Math.max(interval, Number(result.retry_after || interval));
@@ -346,13 +368,28 @@ async function authenticate(baseUrl, envFile) {
     if (result.status === "pending") continue;
     if (result.status === "approved" && result.access_key) {
       saveApiKey(envFile, result.access_key);
-      logErr(`授权成功：${result.user_name || result.user_mobile || result.user_id || "当前用户"}`);
-      logErr(`API Key 已保存到 ${envFile}`);
-      return;
+      try { unlinkSync(pendingAuthFile); } catch { /* 已删除 */ }
+      return {
+        user_name: result.user_name,
+        user_mobile: result.user_mobile,
+        user_id: result.user_id,
+        saved_to: envFile,
+      };
     }
     throw new Error(`设备授权返回未知状态: ${result.status || "空"}`);
   }
-  throw new Error("设备授权已超时，请重新执行 wepig auth");
+  throw new Error("设备授权已超时，请重新执行 wepig auth start");
+}
+
+// 保留原来的阻塞式 auth 行为（命令行本地使用）
+async function authenticate(baseUrl, envFile) {
+  const started = await authStart(baseUrl);
+  logErr(`请在浏览器中确认授权，授权码：${started.user_code}`);
+  logErr(started.verification_url);
+  openBrowser(started.verification_url);
+  const saved = await authPoll(envFile);
+  logErr(`授权成功：${saved.user_name || saved.user_mobile || saved.user_id || "当前用户"}`);
+  logErr(`API Key 已保存到 ${envFile}`);
 }
 
 function usage() {
@@ -361,6 +398,9 @@ usage: wepig [--url URL] [--org TYPE:ID] <command> ...
 
 commands:
   auth [--file PATH]                        浏览器授权并保存个人 API Key
+  auth start                                输出授权链接和授权码（不阻塞）
+  auth poll                                 轮询授权结果并保存 Key
+  whoami                                    输出当前飞书用户和配置目录
   orgs                                      列出当前 Key 可访问的组织
   use TYPE:ID                               持久切换当前组织
   tools                                     列出当前 Key 和组织可用的 MCP 工具
@@ -430,8 +470,25 @@ async function main() {
   if (org && !["tools", "services", "endpoints", "detail", "call"].includes(cmd)) die("--org 仅用于 tools/services/endpoints/detail/call");
 
   if (cmd === "auth") {
-    if (rest.length !== 0 && !(rest.length === 2 && rest[0] === "--file")) die("auth 仅支持 --file PATH");
+    if (rest[0] === "start") {
+      if (rest.length !== 1) die("auth start 不接受参数");
+      print(JSON.stringify(await authStart(baseUrl)));
+      return;
+    }
+    if (rest[0] === "poll") {
+      if (rest.length !== 1) die("auth poll 不接受参数");
+      print(JSON.stringify(await authPoll(defaultEnvFile)));
+      return;
+    }
+    if (rest.length !== 0 && !(rest.length === 2 && rest[0] === "--file")) {
+      die("auth 支持：auth | auth --file PATH | auth start | auth poll");
+    }
     await authenticate(baseUrl, rest[1] || defaultEnvFile);
+    return;
+  }
+  if (cmd === "whoami") {
+    if (rest.length) die("whoami 不接受参数");
+    print(JSON.stringify({ session_key: sessionKey, feishu_user: feishuUser, config_dir: configDir }));
     return;
   }
   if (cmd === "orgs") {
