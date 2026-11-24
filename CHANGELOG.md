@@ -4,6 +4,12 @@
 
 版本号唯一来源是仓库根目录 `VERSION` 文件；`plugin.json`、`gemini-extension.json`、各 marketplace 清单必须与它一致，由 `scripts/check-version.mjs` 校验。
 
+## [Unreleased]
+
+### Added
+
+- 业务数据查询后自动检查趋势、对比和异常；对可追踪线索继续查询关联明细或对比数据，并在答案中区分接口事实、派生计算与待验证推断。
+
 ## [1.1.0] - 2026-11-13
 
 ### Added
