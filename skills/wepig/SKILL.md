@@ -16,6 +16,8 @@ description: 用于处理微猪科技（wepig）生猪数字化管理平台中�
 | 配种、妊娠、分娩、断奶、动物档案、精液、流转、遗传、淘汰、考测、审计等养殖查询 | [references/query.md](references/query.md) |
 | 生产日报/周报/月报、存栏统计、PSY/NPD、结算、公猪/母猪分析、母猪 ROI、PRRS 预警等报表 | [references/report.md](references/report.md) |
 | 集团、公司、猪场、组织结构等后台管理查询 | [references/backstage.md](references/backstage.md) |
+| 401/403、超时、0 命中、结果条数或字段异常等故障 | [references/troubleshooting.md](references/troubleshooting.md) |
+| PSY/NPD/FCR/PRRS 等业务术语释义、用户口语与接口 keyword 对照 | [references/glossary.md](references/glossary.md) |
 
 不要一次性加载所有 references。主流程、鉴权和命令语法以本文件为准；业务 keyword、参数约定和领域例子放在 reference 中。
 
@@ -107,6 +109,15 @@ wepig --org COMPANY:123 call <endpoint_name> key=value
 - **发现线索就钻取**：当前工具支持时，主动沿“汇总 → 猪场/批次 → 个体/事件”查明细，或沿“异常期 → 历史/同期”做对比。每次仍须先发现接口并查看 schema，不猜接口和参数。只围绕异常做定向查询，查到足以解释、排除线索或确认现有数据不足后停止，不做无目标遍历。
 - **区分事实与推断**：接口返回值是事实；自行计算的指标给出计算口径或对比基线；原因、影响和隐患只能作为明确标注的推断或待验证假设，不能把相关性写成因果，也不能仅凭查询数据作疾病诊断。
 - **回答具体风险**：按“对象和时间 → 数据证据 → 可能影响 → 建议核查”说明隐患，并附关键数值。未发现明显异常时，只能表述为“在本次查询范围内未发现明显异常”，不等于排除所有风险；数据不足时直说，不强行找问题。
+## 写操作边界
+
+当前后端暴露的业务接口全部为只读查询（`query_*` / `report_*` / `backstage_*_list`）。若 `tools` / `endpoints` 实际返回中出现写接口（如 `create_` / `add_` / `save_` / `update_` / `delete_` 前缀），必须遵守：
+
+- **用户未明确要求变更数据时，不调用任何写接口**；查询类问题一律用查询接口完成。
+- 调用前用 `detail` 确认必填参数与枚举值，把将提交的参数整理成表格交给用户确认，确认后才执行 `call`。
+- 删除、批量修改类操作必须显式二次确认，并说明影响范围。
+- 写接口超时或报错后不得直接重试，先查询确认是否已生效，避免重复提交。
+- 批量写入逐条调用，完成后汇总成功/失败清单；不承诺自动回滚。
 
 ## 结果呈现
 
@@ -137,7 +148,9 @@ wepig --org COMPANY:123 call <endpoint_name> key=value
 - 不要传身份字段：`user_id`、`user_org_type`、`user_org_id` 由 CLI 或网关注入，脚本会拒绝。组织由 `--org`、`WEPIG_ORG` 或 `wepig use` 决定。
 - 业务参数以 `key=value` 传入：`limit=100` 会转整数，`farm_ids=[1,2]` 会转数组，`start_date=2026-06-01` 保持字符串。
 - 日期统一使用 `YYYY-MM-DD`。
+- 相对日期（"本月""上周""近 30 天""今年"等）必须先取当前系统日期换算成具体 `YYYY-MM-DD` 区间再传参，不得凭记忆猜日期；周报等"周"的口径以 `detail` 的参数说明为准。
 - 必填字段以 `detail <endpoint_name>` 返回的 `inputSchema.required` 为准。
+- **分页拉全量**：列表接口通常用 `offset` / `limit` 分页（常见默认 `limit=10`）。需要汇总、统计或"全部"数据时，必须递增 `offset` 循环调用直至返回为空或不足一页，再合并结果；不得用第一页数据直接下全量结论。大时间范围报表按月或按猪场拆分多次调用再合并。
 - 响应结构以 `detail` 返回的 `outputSchema` 为准；部分接口未声明响应结构，此时无该字段。
 
 ## 环境变量
